@@ -1,0 +1,32 @@
+spring:
+  ai:
+    api-key: sk-2ded255e136048e18392b8ac5a64ace1
+    model: qwen-plus-2025-07-28
+  servlet:
+    multipart:
+      max-file-size: 2GB
+      max-request-size: 2GB
+  datasource:
+    username: root
+    password: root
+    url: jdbc:mysql://127.0.0.1:3306/edu_live?useSSL=false&useUnicode=true&characterEncoding=utf-8&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  redis:
+    data:
+      host: 127.0.0.1
+      port: 6379
+#    password: 5xgnmRu3oMJD
+
+
+mybatis:
+  typeAliasesPackage: cn.live.**.entity
+  mapper-locations: classpath*:mapper/*.xml
+  configuration:
+    mapUnderscoreToCamelCase: true
+
+jwt:
+  priKeyPath: E:/live/public/jwtkey/rea.pri
+  publicKeyPath: E:/live/public/jwtkey/rea.pub
+
+log:
+  path: E:/live/log/ai-service.log

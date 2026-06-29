@@ -251,7 +251,7 @@ public class AiAnswerService {
                 "  ]\n" +
                 "}";
         try {
-            String result = callWithMessage(ask, 2,3000);
+            String result = callWithMessage(ask, 2,30000);
 
             // 1. 判断 null / 空串
             if (result == null || result.isBlank()) {
@@ -308,7 +308,7 @@ public class AiAnswerService {
                 "}";
 
         try {
-            String result = callWithMessage(ask, 3,2000);
+            String result = callWithMessage(ask, 3,20000);
             // 1. 判断 null / 空串
             if (result == null || result.isBlank()) {
                 log.error("AI 返回空内容");
@@ -364,7 +364,7 @@ public class AiAnswerService {
         }
 
         try {
-            String result = callWithMessage(ask,3,2000);
+            String result = callWithMessage(ask,3,20000);
             List<String> jobIds = objectMapper.readValue(
                     objectMapper.readTree(result).get("jobids").toString(),
                     List.class
@@ -390,7 +390,7 @@ public class AiAnswerService {
     public Result judgmentResume(String resumeText) {
         String ask = "这是是当前求职者上传的简历信息："+resumeText+"判断这个文本是否是一份简历。如果是简历返回true,如果不是简历或者是用户随便输入的。返回false。";
         try {
-            String result = callWithMessage(ask,3,2000);
+            String result = callWithMessage(ask,3,20000);
             if(result.equals("true") || result.contains("true")){
                 return Result.success(result);
             }else {
@@ -404,7 +404,7 @@ public class AiAnswerService {
     public Result judgmentPosition(String position) {
         String ask = "这是是当前求职者想要寻找的岗位："+position+"判断这个岗位市面上是否存在。如果存在返回true,如果市面上不存在该岗位或者岗位是用户随便输入的。返回false。";
         try {
-            String result = callWithMessage(ask,3,2000);
+            String result = callWithMessage(ask,3,20000);
             if(result.equals("true")  || result.contains("true")){
                 return Result.success(result);
             }else {
@@ -446,7 +446,7 @@ public class AiAnswerService {
                 "  ]\n" +
                 "}";
         try {
-            String result = callWithMessage(ask,3,2000);
+            String result = callWithMessage(ask,3,20000);
             PersonalAbilityImgVo vo = objectMapper.readValue(result,
                     new TypeReference<PersonalAbilityImgVo>() {
                     });
@@ -565,7 +565,7 @@ public class AiAnswerService {
                 "                    },\n" +
                 "                    {\n" +
                 "                        \"option\": \"B\",\n" +
-                "                        \"text\": \"启用事务批量提交，将数据分成若干批次，每批1000条执行一次COMMIT。\"\n" +
+                "                        \"text\": \"启用事务批量提交，将数据分成若干批次，每批10000条执行一次COMMIT。\"\n" +
                 "                    },\n" +
                 "                    {\n" +
                 "                        \"option\": \"C\",\n" +
@@ -627,7 +627,7 @@ public class AiAnswerService {
                 "        ]" +
                 "}";
         try {
-            String result = callWithMessage(ask,2,3000);
+            String result = callWithMessage(ask,2,30000);
             TestQuestionListVo vo = objectMapper.readValue(result,
                     new TypeReference<TestQuestionListVo>() {
                     });
@@ -663,7 +663,7 @@ public class AiAnswerService {
                 "}" + "improvements为缺点以及建议(最好是三条。可以多点可以少点。2-5条最好)。这是学生的简历：" + dto.getResumeText() + "！这是学生的期望求职岗位：" + dto.getPosition()
                 + "！根据简历以及期望岗位帮我生成一份类似的信息。";
         try {
-            String result = callWithMessage(ask,3,2000);
+            String result = callWithMessage(ask,3,20000);
             System.out.println(result);
             // 将 JSON 字符串转换为 List<MatchPositionVo>
             PerformanceAnalysis performanceAnalysis = objectMapper.readValue(result,
@@ -722,7 +722,7 @@ public class AiAnswerService {
                 "  ]\n" +
                 "}";
         try {
-            String endResult = callWithMessage(ask,3,2000);
+            String endResult = callWithMessage(ask,3,20000);
             if (StringUtils.isEmpty(endResult)) {
                 return  Result.error("导师推荐失败！");
             }

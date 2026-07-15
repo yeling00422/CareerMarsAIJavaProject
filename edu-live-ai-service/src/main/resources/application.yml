@@ -6,7 +6,7 @@ spring:
   cloud:
     nacos:
       username: nacos
-      password: nacos
+      password: ivKmx77J5vYcb53N
       server-addr: 127.0.0.1:8848
   main:
     allow-bean-definition-overriding: true

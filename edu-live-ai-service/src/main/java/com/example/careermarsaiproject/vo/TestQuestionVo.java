@@ -9,8 +9,6 @@ import java.util.List;
 @Data
 @ApiModel(value = "TestQuestionVo", description = "测试问题")
 public class TestQuestionVo {
-//    @ApiModelProperty(value = "id")
-//    private String id;
 
     @ApiModelProperty(value = "试卷名")
     private String name;

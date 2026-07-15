@@ -7,29 +7,18 @@ import com.alibaba.dashscope.aigc.generation.Generation;
 import com.alibaba.dashscope.aigc.generation.GenerationParam;
 import com.alibaba.dashscope.common.Message;
 import com.alibaba.dashscope.common.Role;
-import com.alibaba.dashscope.exception.ApiException;
-import com.alibaba.dashscope.exception.InputRequiredException;
-import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.careermarsaiproject.base.Result;
 import com.example.careermarsaiproject.config.AiConfig;
 import com.example.careermarsaiproject.config.AiJsonCleanerConfig;
-//import com.example.careermarsaiproject.config.OpenAiConfig;
 import com.example.careermarsaiproject.dto.AnalysisResultDto;
-import com.example.careermarsaiproject.dto.CharacteristicsTestReportDto;
 import com.example.careermarsaiproject.dto.RecommendationMentorDto;
-import com.example.careermarsaiproject.entity.Job;
-import com.example.careermarsaiproject.entity.Mentor;
-import com.example.careermarsaiproject.entity.TestQuestion;
+import com.example.careermarsaiproject.entity.*;
+import com.example.careermarsaiproject.utils.IdWorker;
 import com.example.careermarsaiproject.vo.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.theokanning.openai.completion.chat.ChatCompletionRequest;
-//import com.theokanning.openai.completion.chat.ChatCompletionResult;
-//import com.theokanning.openai.completion.chat.ChatMessage;
-//import com.theokanning.openai.completion.chat.ChatMessageRole;
-//import com.theokanning.openai.service.OpenAiService;
 import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -38,7 +27,11 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -60,45 +53,14 @@ public class AiAnswerService {
     private ITestQuestionService testQuestionService;
     @Autowired
     private ObjectMapper objectMapper;
-//    @Autowired
-//    private OpenAiService openAiService ;
-//    @Autowired
-//    private OpenAiConfig openAiConfig ;
-
-//    public String callWithMessage(String question) throws ApiException, NoApiKeyException, InputRequiredException {
-//        String finalQuestion = question + AiConfig.FORCE_PROMPT;
-//
-//        Generation gen = new Generation();
-//        GenerationParam param = null;
-//
-//        try {
-//            Message systemMsg = Message.builder()
-//                    .role(Role.SYSTEM.getValue())
-//                    .content("你是一个严格按照格式要求输出JSON的助手，只返回标准JSON，不添加任何额外内容")
-//                    .build();
-//
-//            Message userMsg = Message.builder()
-//                    .role(Role.USER.getValue())
-//                    .content(finalQuestion)
-//                    .build();
-//            param = GenerationParam.builder()
-//                    // 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：.apiKey("sk-xxx")
-//                    .apiKey(aiConfig.getApiKey())
-//                    // 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
-//                    .model(aiConfig.getModel())
-//                    .messages(Arrays.asList(systemMsg, userMsg))
-//                    .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-//                    .temperature(0.1F) // 降低随机性，提高格式稳定性
-//                    .build();
-//        } catch (ApiException e) {
-//            System.err.println("错误信息：" + e.getMessage());
-//            System.out.println("请参考文档：https://help.aliyun.com/zh/model-studio/developer-reference/error-code");
-//        }
-//        if (param == null) {
-//            return null;
-//        }
-//        return gen.call(param).getOutput().getChoices().get(0).getMessage().getContent();
-//    }
+    @Autowired
+    private IMbtiQuestionService mbtiQuestionService;
+    @Autowired
+    private IConstellationFoundationScoreService constellationFoundationScoreService;
+    @Autowired
+    private IMbtiResultService mbtiResultService;
+    @Autowired
+    private IConsultationRecordService consultationRecordService;
 
     // ====================== 统一AI调用核心 ======================
     public String callWithMessage(String question,int maxRetry,int timeOut) throws Exception {
@@ -174,163 +136,94 @@ public class AiAnswerService {
             if (StringUtils.isEmpty(fullText)){
                 return Result.error("文件转文本失败！");
             }
-            return Result.success(fullText);
+            return parseResumeText(fullText);
         }catch (Exception e) {
             return Result.error("文件解析失败：" + e.getMessage());
         }
     }
 
 
-    public Result<CharacteristicsTestListVo> generateCharacteristicsTest(String resumeText) {
-        String ask = "这是是当前求职者的简历信息:" + resumeText + "帮我根据简历生成十道性格测试题。格式如下：" +
+    public Result<ResumeVo> parseResumeText(String resumeText) {
+        String ask = "这是是当前求职者的简历信息:" + resumeText + "解析简历中的内容。返回我需要的信息。" +
+                "其中。name为姓名。date为出生日期（需要年月日）。educationalQualifications为最高学历。school为毕业院校（最后的毕业院校）。educationalTime为毕业时间（仅需要年和月）。skill为专业技能。educationalExperience和jobExperience教育经历和工作经历"+
+                "如果没有识别出来改字段就返回空字符串即可。格式如下：" +
                 "{\n" +
-                "  \"questions\": [\n" +
-                "    {\n" +
-                "      \"title\": \"你在团队中通常扮演什么角色？\",\n" +
-                "      \"options\": [\n" +
-                "        {\n" +
-                "          \"option\": \"A\",\n" +
-                "          \"text\": \"领导者，负责统筹和决策\"\n" +
-                "        },\n" +
-                "        {\n" +
-                "          \"option\": \"B\",\n" +
-                "          \"text\": \"协调者，促进沟通与合作\"\n" +
-                "        },\n" +
-                "        {\n" +
-                "          \"option\": \"C\",\n" +
-                "          \"text\": \"执行者，专注完成任务\"\n" +
-                "        },\n" +
-                "        {\n" +
-                "          \"option\": \"D\",\n" +
-                "          \"text\": \"创新者，提出新想法和方案\"\n" +
-                "        }\n" +
-                "      ]\n" +
-                "    },\n" +
-                "    {\n" +
-                "      \"title\": \"面对压力时，你更倾向于？\",\n" +
-                "      \"options\": [\n" +
-                "        {\n" +
-                "          \"option\": \"A\",\n" +
-                "          \"text\": \"冷静分析问题，寻找解决方案\"\n" +
-                "        },\n" +
-                "        {\n" +
-                "          \"option\": \"B\",\n" +
-                "          \"text\": \"寻求他人支持和建议\"\n" +
-                "        },\n" +
-                "        {\n" +
-                "          \"option\": \"C\",\n" +
-                "          \"text\": \"暂时回避，等情绪平复后再处理\"\n" +
-                "        },\n" +
-                "        {\n" +
-                "          \"option\": \"D\",\n" +
-                "          \"text\": \"快速行动，通过做事来缓解焦虑\"\n" +
-                "        }\n" +
-                "      ]\n" +
-                "    },\n" +
-                "    {\n" +
-                "      \"title\": \"你更喜欢的工作方式是？\",\n" +
-                "      \"options\": [\n" +
-                "        {\n" +
-                "          \"option\": \"A\",\n" +
-                "          \"text\": \"有明确流程和规范的稳定工作\"\n" +
-                "        },\n" +
-                "        {\n" +
-                "          \"option\": \"B\",\n" +
-                "          \"text\": \"充满变化和挑战的动态工作\"\n" +
-                "        },\n" +
-                "        {\n" +
-                "          \"option\": \"C\",\n" +
-                "          \"text\": \"可以自主安排时间和节奏的工作\"\n" +
-                "        },\n" +
-                "        {\n" +
-                "          \"option\": \"D\",\n" +
-                "          \"text\": \"需要与很多人互动和合作的工作\"\n" +
-                "        }\n" +
-                "      ]\n" +
-                "    }\n" +
-                "  ]\n" +
+                "  \"name\": \"张三\",\n" +
+                "  \"date\": \"2000-01-01\",\n" +
+                "  \"educationalQualifications\": \"本科\",\n" +
+                "  \"school\": \"南京理工大学\",\n" +
+                "  \"educationalTime\": \"2022-06\",\n" +
+                "  \"skill\": \"Java、python\",\n" +
+                "  \"educationalExperience\": \"2018-09 至 2022-06 南京理工大学 计算机专业\",\n" +
+                "  \"jobExperience\": \"2022-07 至今 腾讯科技有限公司 后端开发工程师\"\n" +
                 "}";
         try {
             String result = callWithMessage(ask, 2,30000);
-
             // 1. 判断 null / 空串
             if (result == null || result.isBlank()) {
                 log.error("AI 返回空内容");
-                return Result.error("性格测试题生成失败！");
+                return Result.error("简历解析失败！");
             }
 
             // 2. 判断空 JSON（无效返回）
             String cleanResult = result.trim();
             if (cleanResult.equals("{}") || cleanResult.equals("[]")) {
                 log.error("AI 返回空 JSON：{}", result);
-                return Result.error("性格测试题生成失败！");
+                return Result.error("简历解析失败！");
             }
 
             // 3. 正常解析
-            CharacteristicsTestListVo voList = objectMapper.readValue(result, new TypeReference<CharacteristicsTestListVo>() {});
-            return Result.success(voList);
-
-        } catch (Exception e) {
-            log.error("性格测试题生成失败！", e);
-        }
-        return Result.error("性格测试题生成失败！");
-    }
-
-    public Result<CharacteristicsTestReportVo> generateReport(CharacteristicsTestReportDto dto) {
-        String characteristicsTest = dto.getCharacteristicsTest();
-        String userAnswers = dto.getUserAnswers();
-        String resumeText = dto.getResumeText();
-        String ask = "这是性格测试题:" + characteristicsTest + "这是求职者的答题结果:" + userAnswers +"这是求职者的简历文本:" + resumeText +  "根据这些信息帮我生成性格测试报告以及推荐几个岗位（岗位名称、推荐理由和岗位匹配程度 最高分100，最低分60）。格式如下：" +
-                "{\n" +
-                "  \"testReportText\": \"根据您的性格测试结果分析，您属于‘ENTP 型 – 辩论家人格’。您富有创造力、好奇心强、喜欢挑战传统思维，擅长从多角度分析问题并提出创新性解决方案。您在高压环境下仍能保持理性思考，适合从事需要快速决策、灵活应变以及高度沟通协作的工作。\",\n" +
-                "  \"recommendedPositionList\": [\n" +
-                "    {\n" +
-                "      \"positionName\": \"金融分析师\",\n" +
-                "      \"matchDegree\": \"92\",\n" +
-                "      \"reasonsForRecommendation\": \"该岗位需要强大的逻辑思维与数据分析能力，与您理性、善于质疑和验证的性格高度契合。\"\n" +
-                "    },\n" +
-                "    {\n" +
-                "      \"positionName\": \"投资顾问\",\n" +
-                "      \"matchDegree\": \"88\",\n" +
-                "      \"reasonsForRecommendation\": \"投资顾问需要快速捕捉市场变化并提出创新策略，符合您喜欢挑战传统、寻找新机会的特质。\"\n" +
-                "    },\n" +
-                "    {\n" +
-                "      \"positionName\": \"管理咨询顾问\",\n" +
-                "      \"matchDegree\": \"85\",\n" +
-                "      \"reasonsForRecommendation\": \"咨询行业强调问题解决与跨部门沟通，您擅长从多角度分析问题并推动方案落地，非常适合该岗位。\"\n" +
-                "    },\n" +
-                "    {\n" +
-                "      \"positionName\": \"数据分析师\",\n" +
-                "      \"matchDegree\": \"80\",\n" +
-                "      \"reasonsForRecommendation\": \"该岗位注重事实与逻辑，您在处理复杂数据时能够保持客观理性，有利于做出精准判断。\"\n" +
-                "    }\n" +
-                "  ]\n" +
-                "}";
-
-        try {
-            String result = callWithMessage(ask, 3,20000);
-            // 1. 判断 null / 空串
-            if (result == null || result.isBlank()) {
-                log.error("AI 返回空内容");
-                return Result.error("性格测试报告生成失败！");
-            }
-
-            // 2. 判断空 JSON（无效返回）
-            String cleanResult = result.trim();
-            if (cleanResult.equals("{}") || cleanResult.equals("[]")) {
-                log.error("AI 返回空 JSON：{}", result);
-                return Result.error("性格测试报告生成失败！");
-            }
-
-            // 3. 正常解析
-            CharacteristicsTestReportVo vo = objectMapper.readValue(result, new TypeReference<CharacteristicsTestReportVo>() {});
+            ResumeVo vo = objectMapper.readValue(result, new TypeReference<ResumeVo>() {});
             return Result.success(vo);
 
         } catch (Exception e) {
-            log.error("性格测试题生成失败！", e);
+            log.error("简历解析失败！", e);
         }
-        return Result.error("性格测试题生成失败！");
+        return Result.error("简历解析失败！");
     }
+
+    public Result<MBTIContentVo> searchMBTIContent(String constellation) {
+        try {
+            ConstellationFoundationScore constellationFoundationScore = constellationFoundationScoreService.getOne(new LambdaQueryWrapper<ConstellationFoundationScore>()
+                    .eq(ConstellationFoundationScore::getConstellation, constellation));
+
+            if (constellationFoundationScore == null){
+                return Result.error("未查询到星座！出生日期可能有问题！");
+            }
+
+            List<MbtiQuestion> mbtiQuestionList = mbtiQuestionService.list();
+            if (mbtiQuestionList.size() == 0){
+                return Result.error("未查询到MBTI测试题！");
+            }
+
+            MBTIContentVo vo = new MBTIContentVo();
+            vo.setConstellationFoundationScore(constellationFoundationScore);
+            vo.setMbtiQuestionList(mbtiQuestionList);
+            return Result.success(vo);
+        } catch (Exception e) {
+            log.error("MBTI测试题查询失败！", e);
+        }
+        return Result.error("MBTI测试题查询失败！");
+    }
+
+    public Result<MbtiResult> searchMBTIResult(String name) {
+        try {
+            MbtiResult mbtiResult = mbtiResultService.getOne(new LambdaQueryWrapper<MbtiResult>()
+                    .eq(MbtiResult::getName, name));
+
+
+            if (mbtiResult == null){
+                return Result.error("未查询对应的人格结果！");
+            }
+
+            return Result.success(mbtiResult);
+        } catch (Exception e) {
+            log.error("MBTI测试结果查询失败！", e);
+        }
+        return Result.error("MBTI测试结果查询失败！");
+    }
+
+
 
     public Result<List<MatchJobVo>> matchJobByResumeText(String resumeText) {
         List<Job> jobList = jobService.list();
@@ -737,29 +630,37 @@ public class AiAnswerService {
         return Result.error("导师推荐失败!");
     }
 
-//    public String callWithMessage2(String question) {
-//        ChatMessage systemMsg = new ChatMessage(
-//                ChatMessageRole.SYSTEM.value(),
-//                "You are a helpful assistant."
-//        );
-//
-//        ChatMessage userMsg = new ChatMessage(
-//                ChatMessageRole.USER.value(),
-//                question
-//        );
-//
-//        ChatCompletionRequest request = ChatCompletionRequest.builder()
-//                .model(openAiConfig.getModel())
-//                .messages(Arrays.asList(systemMsg, userMsg))
-//                .temperature(0.7)
-//                .build();
-//
-//        ChatCompletionResult result =
-//                openAiService.createChatCompletion(request);
-//
-//        return result.getChoices()
-//                .get(0)
-//                .getMessage()
-//                .getContent();
-//    }
+    @Transactional()
+    public Result<EndResultVo> saveConsultationRecord(String studentId, String mentorId) {
+        LocalDateTime now = LocalDateTime.now();
+        LambdaQueryWrapper<ConsultationRecord> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ConsultationRecord::getStudentId,studentId);
+        queryWrapper.eq(ConsultationRecord::getMentorId,mentorId);
+        ConsultationRecord consultationRecord = consultationRecordService.getOne(queryWrapper);
+        if (consultationRecord != null){
+            //判断今天是否已经保存了一条记录
+            LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+            LocalDateTime lastUpdateTime = consultationRecord.getUpdateTime();
+            if (lastUpdateTime.isAfter(todayStart)) {
+                //今天已经提交过记录了
+                return Result.error("今天已经提交过咨询记录了哦！");
+            } else {
+                // 不是今天，更新最新的记录与时间
+                consultationRecord.setTotalCount(consultationRecord.getTotalCount()+1);
+                consultationRecord.setUpdateTime(now);
+                consultationRecordService.updateById(consultationRecord);
+            }
+        }else {
+            consultationRecord = new ConsultationRecord();
+            consultationRecord.setId(IdWorker.getId().toString());
+            consultationRecord.setStudentId(studentId);
+            consultationRecord.setMentorId(mentorId);
+            consultationRecord.setCreateTime(now);
+            consultationRecord.setUpdateTime(now);
+            consultationRecord.setHandelStatus(0);
+            consultationRecord.setTotalCount(1);
+            consultationRecordService.save(consultationRecord);
+        }
+        return Result.success();
+    }
 }

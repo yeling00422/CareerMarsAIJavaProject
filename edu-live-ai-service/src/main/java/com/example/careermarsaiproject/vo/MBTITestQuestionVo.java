@@ -6,11 +6,11 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-@ApiModel(value = "CharacteristicsTestVo", description = "性格测试题")
-public class CharacteristicsTestVo {
+@ApiModel(value = "MBTITestQuestionVo", description = "mbti测试题")
+public class MBTITestQuestionVo {
     @ApiModelProperty(value = "题目")
     private String title;
 
     @ApiModelProperty(value = "选项")
-    private List<CharacteristicsTestOptionVo> options;
+    private List<MBTIOptionVo> options;
 }

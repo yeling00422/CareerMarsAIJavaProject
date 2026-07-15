@@ -1,4 +1,4 @@
-package com.example.careermarsaiproject.config;//package com.example.careermarsaiproject.config;
+package com.example.careermarsaiproject.config;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;

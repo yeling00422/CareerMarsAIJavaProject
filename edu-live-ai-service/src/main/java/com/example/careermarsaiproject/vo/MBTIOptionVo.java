@@ -5,8 +5,8 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 @Data
-@ApiModel(value = "CharacteristicsTestOptionVo", description = "性格测试题选项")
-public class CharacteristicsTestOptionVo {
+@ApiModel(value = "MBTIOptionVo", description = "性格测试题选项")
+public class MBTIOptionVo {
     @ApiModelProperty(value = "选项")
     private String option;
 

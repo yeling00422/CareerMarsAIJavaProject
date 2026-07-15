@@ -20,10 +20,10 @@ public class CodeGenerator {
                     )
                     .packageConfig(builder -> builder
                             .parent("com.example.careermarsaiproject") // 父包名
-                            .entity("dto")
+                            .entity("entity")
                             .mapper("mapper")
                             .service("service")
-                            .serviceImpl("serviceImpl")
+                            .serviceImpl("impl")
                             .pathInfo(new HashMap<OutputFile, String>() {{
                                 put(OutputFile.service, System.getProperty("user.dir") + "/edu-live-ai-service/src/main/java/com/example/careermarsaiproject/service");
                                 put(OutputFile.serviceImpl, System.getProperty("user.dir") + "/edu-live-ai-service/src/main/java/com/example/careermarsaiproject/service/impl");
@@ -33,7 +33,7 @@ public class CodeGenerator {
                             }})
                     )
                     .strategyConfig(builder -> builder
-                                    .addInclude("tb_student") // 指定生成的表
+                                    .addInclude("tb_consultation_record") // 指定生成的表
                                     .addTablePrefix("tb_")
                                     .entityBuilder()
                                     .enableLombok()

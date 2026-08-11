@@ -117,6 +117,13 @@ public class AiController {
         return aiAnswerService.recommendationMentor(dto);
     }
 
+    @ApiOperation("查看全部导师")
+    @ResponseBody
+    @GetMapping("/search/all/mentor")
+    public Result<EndResultVo> searchAllMentor(){
+        return aiAnswerService.searchAllMentor();
+    }
+
 
     @ApiOperation("设置cookie")
     @ResponseBody

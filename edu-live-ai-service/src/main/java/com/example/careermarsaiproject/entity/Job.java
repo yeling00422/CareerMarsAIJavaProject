@@ -24,9 +24,14 @@ public class Job implements Serializable {
     private String id;
 
     /**
-     * 行业id
+     * 领域id
      */
-    private String industryId;
+    private String lableIds;
+
+    /**
+     * 领域名称
+     */
+    private String lableNames;
 
     /**
      * 公司名称

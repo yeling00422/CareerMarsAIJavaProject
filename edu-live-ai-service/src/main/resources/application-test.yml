@@ -1,3 +1,10 @@
+tencent:
+  ocr:
+    appId: 1307498917
+    secret-id: ${TENCENT_OCR_SECRET_ID}
+    secret-key: ${TENCENT_OCR_SECRET_KEY}
+    region: ap-beijing
+
 spring:
   ai:
     api-key: sk-2ded255e136048e18392b8ac5a64ace1
@@ -28,5 +35,6 @@ jwt:
   priKeyPath: /home/live/public/jwtkey/rea.pri
   publicKeyPath: /home/live/public/jwtkey/rea.pub
 
-log:
-  path: /home/live/log/ai-service.log
+logging:
+  file:
+    name: /home/live/log/ai-service.log

@@ -11,6 +11,12 @@ public class MentorResultVo {
     @JsonProperty("menName")
     private String name;
     private String lableNames;
+    private String resume;
+    private int level;
+    @JsonProperty("schoolName")
+    private String schoolName;
+    @JsonProperty("workEnterprise")
+    private String workEnterprise;
     private double rating;
     @JsonProperty("studyCount")
     private int studentCount;

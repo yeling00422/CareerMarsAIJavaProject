@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -9,7 +9,7 @@
 	</parent>
 	<groupId>com.example</groupId>
 	<artifactId>edu-live-ai</artifactId>
-<!--	<artifactId>edu-live-ai-service</artifactId>-->
+	<!--	<artifactId>edu-live-ai-service</artifactId>-->
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>CareerMarsAIProject</name>
@@ -33,7 +33,28 @@
 	<properties>
 		<java.version>17</java.version>
 		<spring-ai.version>1.1.2</spring-ai.version>
+		<spring-cloud.version>2023.0.2</spring-cloud.version>
+		<spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.alibaba.cloud</groupId>
+				<artifactId>spring-cloud-alibaba-dependencies</artifactId>
+				<version>${spring-cloud-alibaba.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 
 		<dependency>
@@ -88,17 +109,17 @@
 			<version>2.22.5</version>
 		</dependency>
 
-<!--		<dependency>-->
-<!--			<groupId>com.theokanning.openai-gpt3-java</groupId>-->
-<!--			<artifactId>service</artifactId>-->
-<!--			<version>0.18.0</version>-->
-<!--		</dependency>-->
+		<!--		<dependency>-->
+		<!--			<groupId>com.theokanning.openai-gpt3-java</groupId>-->
+		<!--			<artifactId>service</artifactId>-->
+		<!--			<version>0.18.0</version>-->
+		<!--		</dependency>-->
 
-<!--		<dependency>-->
-<!--			<groupId>com.openai</groupId>-->
-<!--			<artifactId>openai-java</artifactId>-->
-<!--			<version>0.22.0</version>-->
-<!--		</dependency>-->
+		<!--		<dependency>-->
+		<!--			<groupId>com.openai</groupId>-->
+		<!--			<artifactId>openai-java</artifactId>-->
+		<!--			<version>0.22.0</version>-->
+		<!--		</dependency>-->
 
 		<dependency>
 			<groupId>com.openai</groupId>
@@ -133,6 +154,17 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.alibaba.cloud</groupId>
+			<artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.tencentcloudapi</groupId>
+			<artifactId>tencentcloud-sdk-java</artifactId>
+			<version>3.1.1021</version>
 		</dependency>
 
 	</dependencies>

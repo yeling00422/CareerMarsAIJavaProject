@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.careermarsaiproject.mapper.ConstellationFoundationScoreMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.careermarsaiproject.entity.ConstellationFoundationScore">
+        <id column="id" property="id" />
+        <result column="constellation" property="constellation" />
+        <result column="e_score" property="eScore" />
+        <result column="i_score" property="iScore" />
+        <result column="s_score" property="sScore" />
+        <result column="n_score" property="nScore" />
+        <result column="t_score" property="tScore" />
+        <result column="f_score" property="fScore" />
+        <result column="j_score" property="jScore" />
+        <result column="p_score" property="pScore" />
+        <result column="attributes" property="attributes" />
+        <result column="explanation" property="explanation" />
+        <result column="create_id" property="createId" />
+        <result column="create_time" property="createTime" />
+        <result column="update_id" property="updateId" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+</mapper>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.careermarsaiproject.mapper.ConsultationRecordMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.careermarsaiproject.entity.ConsultationRecord">
+        <id column="id" property="id" />
+        <result column="student_id" property="studentId" />
+        <result column="mentor_id" property="mentorId" />
+        <result column="total_count" property="totalCount" />
+        <result column="handel_status" property="handelStatus" />
+        <result column="handel_id" property="handelId" />
+        <result column="handel_desc" property="handelDesc" />
+        <result column="handel_time" property="handelTime" />
+        <result column="create_id" property="createId" />
+        <result column="create_time" property="createTime" />
+        <result column="update_id" property="updateId" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+</mapper>

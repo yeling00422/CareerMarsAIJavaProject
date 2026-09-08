@@ -22,6 +22,10 @@ import com.example.careermarsaiproject.vo.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.models.ChatCompletion;
+import com.openai.models.ChatCompletionCreateParams;
 import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -169,6 +173,7 @@ public class AiAnswerService {
                 "如果没有识别出来改字段就返回空字符串即可。格式如下：" +
                 "{\n" +
                 "  \"name\": \"张三\",\n" +
+                "  \"gender\": \"男\",\n" +
                 "  \"date\": \"2000-01-01\",\n" +
                 "  \"educationalQualifications\": \"本科\",\n" +
                 "  \"school\": \"南京理工大学\",\n" +
@@ -579,6 +584,8 @@ public class AiAnswerService {
 //                    "    \"reasons\" : [ \"具备投资银行与行业研究经验，有助于理解外贸市场动态\", \"熟悉银行体系运作，对国际贸易结算流程有实际认知\", \"长期从事面试辅导，能精准提升应聘成功率\" ]\n" +
 //                    "  } ]\n" +
 //                    "}";
+
+//            endResult = null;
             if (StringUtils.isEmpty(endResult)) {
                 log.warn("导师推荐失败: AI返回内容为空");
                 return  Result.error("导师推荐失败！");
@@ -588,7 +595,7 @@ public class AiAnswerService {
                     new TypeReference<EndResultVo>() {
                     });
             List<MentorResultVo> recommendationList = endResultVo.getMentorList();
-            List<MentorResultVo> mentorResultVos = selectMentorByPositionAndMBTIResult(mentorList, dto.getPosition(), dto.getMbtiResult());
+            List<MentorResultVo> mentorResultVos = selectMentorByPositionAndMBTIResult(mentorList, dto.getPosition(), dto.getMbtiResult(),dto.getJobId());
             if (recommendationList.size() == 0){
                 if (mentorResultVos.size() != 0){
                     endResultVo.setMentorList(mentorResultVos);
@@ -616,60 +623,105 @@ public class AiAnswerService {
         return Result.error("导师推荐失败!");
     }
 
+    public List<MentorResultVo> selectMentorByPositionAndMBTIResult(List<Mentor> mentorVoList, String position, String mbtiName, String jobId) {
+        List<MentorResultVo> voList = new ArrayList<>();
 
-    public List<MentorResultVo> selectMentorByPositionAndMBTIResult(List<Mentor> mentorVoList,String position, String mbtiName) {
+        // ========== 1、提前解析岗位标签 job ==========
+        Job job = jobService.getById(jobId);
+        List<String> jobLableIdList = new ArrayList<>();
+        if (job != null && StringUtils.isNotEmpty(job.getLableIds())) {
+            jobLableIdList = Arrays.stream(job.getLableIds().split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .toList();
+        }
+
+        // ========== 2、提前解析MBTI结果 ==========
         LambdaQueryWrapper<MbtiResult> mbtiResultLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        mbtiResultLambdaQueryWrapper.eq(MbtiResult::getName,mbtiName);
+        mbtiResultLambdaQueryWrapper.eq(MbtiResult::getName, mbtiName);
         MbtiResult mbtiResult = mbtiResultService.getOne(mbtiResultLambdaQueryWrapper);
+        if (mbtiResult == null) {
+            return voList;
+        }
         String firstIndustry = mbtiResult.getFirstIndustry();
         String firstPostion = mbtiResult.getFirstPostion();
         String secondIndustry = mbtiResult.getSecondIndustry();
         String secondPostion = mbtiResult.getSecondPostion();
-        List<MentorResultVo> voList = new ArrayList<>();
+
+        // ========== 3、遍历导师，单层循环处理所有逻辑 ==========
         for (Mentor mentor : mentorVoList) {
             MentorResultVo vo = new MentorResultVo();
-            String lableNames = mentor.getLableNames();
+            BeanUtils.copyProperties(mentor, vo);
+            vo.setName(mentor.getMenName());
+
+            // 随机评分匹配率
+            int marryRate = ThreadLocalRandom.current().nextInt(60, 101);
+            int placementRate = ThreadLocalRandom.current().nextInt(60, 101);
+            double randomDouble = ThreadLocalRandom.current().nextDouble(3.0, 5.01);
+            double rating = Math.round(randomDouble * 10.0) / 10.0;
+            vo.setMarryRate(marryRate);
+            vo.setPlacementRate(placementRate);
+            vo.setRating(rating);
+
             List<String> reasons = new ArrayList<>();
+
+            // ---------------- 判断A：岗位标签是否匹配（job标签和导师标签存在交集） ----------------
+            boolean jobLabelMatch = false;
+            String mentorLableIds = mentor.getLableIds();
+            if (!jobLableIdList.isEmpty() && StringUtils.isNotBlank(mentorLableIds)) {
+                List<String> mentorLabelList = Arrays.stream(mentorLableIds.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isBlank())
+                        .toList();
+                // 是否存在任意标签交集
+                jobLabelMatch = jobLableIdList.stream().anyMatch(mentorLabelList::contains);
+            }
+
+            // ---------------- 判断B：MBTI/用户岗位是否匹配（匹配任意一项行业/岗位） ----------------
+            String lableNames = mentor.getLableNames();
             boolean matchFirstIndustry = hasMatchLabel(lableNames, firstIndustry);
             boolean matchSecondIndustry = hasMatchLabel(lableNames, secondIndustry);
             boolean matchFirstPosition = hasMatchLabel(lableNames, firstPostion);
             boolean matchSecondPosition = hasMatchLabel(lableNames, secondPostion);
             boolean matchUserPosition = hasMatchLabel(lableNames, position);
+            boolean mbtiPositionMatch = matchFirstIndustry || matchSecondIndustry || matchFirstPosition || matchSecondPosition || matchUserPosition;
 
-            if (matchFirstIndustry || matchSecondIndustry || matchFirstPosition || matchSecondPosition || matchUserPosition){
-                BeanUtils.copyProperties(mentor,vo);
-                vo.setName(mentor.getMenName());
-                //marryRate匹配率，successRate为成功功率，rating为导师评分，reasons为推荐理由
-                int marryRate = ThreadLocalRandom.current().nextInt(60, 101);
-                int placementRate = ThreadLocalRandom.current().nextInt(60, 101);
-                // 保留1位小数示例
-                double randomDouble = ThreadLocalRandom.current().nextDouble(3.0, 5.01);
-                double rating = Math.round(randomDouble * 10.0) / 10.0;
-
-                vo.setMarryRate(marryRate);
-                vo.setRating(rating);
-                vo.setPlacementRate(placementRate);
-                if (matchFirstIndustry){
-                    reasons.add(mbtiName+"人格首选推荐行业");
-                }
-                if (matchSecondIndustry){
-                    reasons.add(mbtiName+"人格次选推荐行业");
-                }
-                if (matchFirstPosition){
-                    reasons.add(mbtiName+"人格首选推荐岗位");
-                }
-                if (matchSecondPosition){
-                    reasons.add(mbtiName+"人格次选推荐岗位");
-                }
-                if (matchUserPosition){
-                    reasons.add("与您选择/填写的“"+position+"”高度匹配");
-                }
-                vo.setReasons(reasons);
-                voList.add(vo);
+            // ========== 过滤：两个条件都不匹配直接跳过该导师 ==========
+            if (!jobLabelMatch && !mbtiPositionMatch) {
+                continue;
             }
+
+            // ========== 组装推荐理由 reasons，严格按照你的业务规则 ==========
+            // 规则1：岗位标签匹配，增加理由
+            if (jobLabelMatch) {
+                reasons.add("岗位所属领域在导师擅长领域范围内");
+            }
+            // 规则2：mbti/用户岗位匹配，追加对应理由
+            if (mbtiPositionMatch) {
+                if (matchFirstIndustry) {
+                    reasons.add(mbtiName + "人格首选推荐行业");
+                }
+                if (matchSecondIndustry) {
+                    reasons.add(mbtiName + "人格次选推荐行业");
+                }
+                if (matchFirstPosition) {
+                    reasons.add(mbtiName + "人格首选推荐岗位");
+                }
+                if (matchSecondPosition) {
+                    reasons.add(mbtiName + "人格次选推荐岗位");
+                }
+                if (matchUserPosition) {
+                    reasons.add("与您选择/填写的“" + position + "”高度匹配");
+                }
+            }
+
+            vo.setReasons(reasons);
+            voList.add(vo);
         }
         return voList;
     }
+
+
 
     /**
      * 判断两组标签是否存在匹配项
@@ -753,5 +805,27 @@ public class AiAnswerService {
         EndResultVo endResultVo = new EndResultVo();
         endResultVo.setMentorList(voList);
         return Result.success(endResultVo);
+    }
+
+    public Result testChat(String question) {
+        OpenAIClient client = OpenAIOkHttpClient.builder()
+                .apiKey(aiConfig.getApiKey())
+                .baseUrl("https://llm-sa9f3uwfha2ecq79.cn-beijing.maas.aliyuncs.com/compatible-mode/v1")
+                .build();
+
+        ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
+                .addUserMessage(question)
+                .model(aiConfig.getModel())
+                .build();
+
+        try {
+            ChatCompletion chatCompletion = client.chat().completions().create(params);
+            System.out.println(chatCompletion);
+            return Result.success(chatCompletion);
+        } catch (Exception e) {
+            System.err.println("Error occurred: " + e.getMessage());
+            e.printStackTrace();
+            return Result.error("e");
+        }
     }
 }

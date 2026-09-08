@@ -14,4 +14,5 @@ public class ResumeVo {
     private String skill;
     private String educationalExperience;
     private String jobExperience;
+    private String gender;
 }

@@ -9,14 +9,23 @@
         <result column="group" property="group" />
         <result column="type" property="type" />
         <result column="description" property="description" />
-        <result column="advantage" property="advantage" />
-        <result column="disadvantage" property="disadvantage" />
+        <result column="advantage1" property="advantage1" />
+        <result column="advantage2" property="advantage2" />
+        <result column="advantage3" property="advantage3" />
+        <result column="advantage4" property="advantage4" />
+        <result column="disadvantage1" property="disadvantage1" />
+        <result column="disadvantage2" property="disadvantage2" />
+        <result column="disadvantage3" property="disadvantage3" />
+        <result column="disadvantage4" property="disadvantage4" />
         <result column="first_industry" property="firstIndustry" />
         <result column="first_postion" property="firstPostion" />
         <result column="second_industry" property="secondIndustry" />
         <result column="second_postion" property="secondPostion" />
         <result column="avoid" property="avoid" />
-        <result column="suggestion" property="suggestion" />
+        <result column="suggestion1" property="suggestion1" />
+        <result column="suggestion2" property="suggestion2" />
+        <result column="suggestion3" property="suggestion3" />
+        <result column="suggestion4" property="suggestion4" />
         <result column="create_id" property="createId" />
         <result column="create_time" property="createTime" />
         <result column="update_id" property="updateId" />

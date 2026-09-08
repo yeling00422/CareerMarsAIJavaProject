@@ -8,6 +8,7 @@ public class PerformanceAnalysis {
     private int culturalCompatibility;
     private int resumeMatchingScore;
     private int overallPerformance;
+
     private List<Improvement> improvements;
 //    private List<MentorResultVo> mentorList;
 

@@ -15,6 +15,8 @@ public class RecommendationMentorDto {
     private String resumeText;
     @ApiModelProperty(value = "岗位")
     private String position;
+    @ApiModelProperty(value = "岗位id")
+    private String jobId;
     @ApiModelProperty(value = "MBTI测试结果")
     private String mbtiResult;
 }

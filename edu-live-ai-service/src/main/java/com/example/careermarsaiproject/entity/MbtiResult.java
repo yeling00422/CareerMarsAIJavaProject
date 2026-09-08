@@ -46,14 +46,44 @@ public class MbtiResult implements Serializable {
     private String description;
 
     /**
-     * 核心优势
+     * 核心优势1
      */
-    private String advantage;
+    private String advantage1;
 
     /**
-     * 明显短板
+     * 核心优势2
      */
-    private String disadvantage;
+    private String advantage2;
+
+    /**
+     * 核心优势3
+     */
+    private String advantage3;
+
+    /**
+     * 核心优势4
+     */
+    private String advantage4;
+
+    /**
+     * 明显短板1
+     */
+    private String disadvantage1;
+
+    /**
+     * 明显短板2
+     */
+    private String disadvantage2;
+
+    /**
+     * 明显短板3
+     */
+    private String disadvantage3;
+
+    /**
+     * 明显短板4
+     */
+    private String disadvantage4;
 
     /**
      * 首选行业
@@ -81,9 +111,24 @@ public class MbtiResult implements Serializable {
     private String avoid;
 
     /**
-     * 个人成长 & 职场建议
+     * 个人成长 & 职场建议1
      */
-    private String suggestion;
+    private String suggestion1;
+
+    /**
+     * 个人成长 & 职场建议2
+     */
+    private String suggestion2;
+
+    /**
+     * 个人成长 & 职场建议3
+     */
+    private String suggestion3;
+
+    /**
+     * 个人成长 & 职场建议4
+     */
+    private String suggestion4;
 
     /**
      * 创建人

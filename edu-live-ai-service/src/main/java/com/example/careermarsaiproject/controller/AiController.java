@@ -24,6 +24,14 @@ public class AiController {
 
     @ApiOperation("解析简历文件")
     @ResponseBody
+    @GetMapping("/ask/question")
+    public Result testChat(String question) {
+        Result result = aiAnswerService.testChat(question);
+        return result;
+    }
+
+    @ApiOperation("解析简历文件")
+    @ResponseBody
     @PostMapping("/parse/resume/file")
     public Result<ResumeVo> parseResumeFile(@RequestParam("file") MultipartFile file) {
         try {
@@ -45,8 +53,9 @@ public class AiController {
             if (!isImage && !isPdf && !isDocx) {
                 return Result.error("仅支持图片、PDF、doc、docx格式简历文件");
             }
+            Result result = aiAnswerService.parseFile(file);
 
-            return aiAnswerService.parseFile(file);
+            return result;
         } catch (Exception e) {
             return Result.error("解析文件时发生错误: " + e.getMessage());
         }

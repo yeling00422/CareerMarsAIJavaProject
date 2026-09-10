@@ -3,7 +3,10 @@ package com.example.careermarsaiproject.controller;
 import com.example.careermarsaiproject.base.Result;
 import com.example.careermarsaiproject.dto.AnalysisResultDto;
 import com.example.careermarsaiproject.dto.RecommendationMentorDto;
+import com.example.careermarsaiproject.dto.YxbScoreDto;
 import com.example.careermarsaiproject.entity.MbtiResult;
+import com.example.careermarsaiproject.entity.YxbEndScore;
+import com.example.careermarsaiproject.entity.YxbScore;
 import com.example.careermarsaiproject.service.AiAnswerService;
 import com.example.careermarsaiproject.vo.*;
 import io.swagger.annotations.ApiOperation;
@@ -159,4 +162,70 @@ public class AiController {
     public Result<EndResultVo> saveConsultationRecord(@RequestParam("studentId") String studentId,@RequestParam("mentorId") String mentorId){
         return aiAnswerService.saveConsultationRecord(studentId,mentorId);
     }
+
+
+//    /**
+//     * 控制台提交分数，大屏实时刷新
+//     * POST /ai/yxb/insert/score
+//     */
+//    @ResponseBody
+//    @PostMapping("/yxb/insert/score")
+//    public Result<Void> insertScore(@RequestBody YxbScoreDTO dto) {
+//        aiAnswerService.saveCurrentScore(dto);
+//        return Result.success();
+//    }
+//
+//    /**
+//     * 大屏轮询获取当前打分
+//     * GET /ai/yxb/search/score
+//     */
+//    @ResponseBody
+//    @GetMapping("/yxb/search/score")
+//    public Result<YxbScore> searchScore() {
+//        YxbScore score = aiAnswerService.getCurrentScore();
+//        return Result.success(score);
+//    }
+//
+//    /**
+//     * 大屏获取选手排行榜
+//     * GET /ai/yxb/search/endScore
+//     */
+//    @ResponseBody
+//    @GetMapping("/yxb/search/endScore")
+//    public Result<List<YxbEndScore>> searchEndScore() {
+//        return aiAnswerService.listRank();
+//    }
+
+
+    @ResponseBody
+    @GetMapping("/yxb/search/score")
+    public Result<YxbScore> searchScore(){
+        return aiAnswerService.searchScore();
+    }
+
+    @ResponseBody
+    @PostMapping("/yxb/insert/score")
+    public Result insertScore(@RequestBody YxbScoreDto dto){
+        return aiAnswerService.insertScore(dto);
+    }
+
+    @ResponseBody
+    @GetMapping("/yxb/search/endScore")
+    public Result<List<YxbEndScoreVo>> searchEndScore(){
+        return aiAnswerService.searchEndScore();
+    }
+
+    @ResponseBody
+    @GetMapping("/yxb/cureent/endScore")
+    public Result<List<YxbEndScore>> searchCurrentScore(){
+        return aiAnswerService.searchCurrentScore();
+    }
+
+    @ResponseBody
+    @PostMapping("/yxb/update/endScore")
+    public Result<Boolean> updateEndScore(@RequestBody YxbEndScore yxbEndScore){
+        return aiAnswerService.updateEndScore(yxbEndScore);
+    }
+
+
 }

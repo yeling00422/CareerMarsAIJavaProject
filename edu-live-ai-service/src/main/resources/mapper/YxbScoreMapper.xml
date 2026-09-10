@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.careermarsaiproject.mapper.YxbScoreMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.careermarsaiproject.entity.YxbScore">
+        <id column="id" property="id" />
+        <result column="name" property="name" />
+        <result column="work" property="work" />
+        <result column="score1" property="score1" />
+        <result column="score2" property="score2" />
+        <result column="score3" property="score3" />
+        <result column="score4" property="score4" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+</mapper>

@@ -29,6 +29,11 @@ public class YxbScore implements Serializable {
     private String name;
 
     /**
+     * 组别名称
+     */
+    private String groupName;
+
+    /**
      * 作品名称
      */
     private String work;
@@ -52,6 +57,11 @@ public class YxbScore implements Serializable {
      * 角色还原度得分
      */
     private Double score4;
+
+    /**
+     * 组别
+     */
+    private Double total;
 
     /**
      * 更新时间

@@ -13,7 +13,6 @@ import com.example.careermarsaiproject.config.AiConfig;
 import com.example.careermarsaiproject.config.AiJsonCleanerConfig;
 import com.example.careermarsaiproject.dto.AnalysisResultDto;
 import com.example.careermarsaiproject.dto.RecommendationMentorDto;
-import com.example.careermarsaiproject.dto.YxbScoreDto;
 import com.example.careermarsaiproject.entity.*;
 import com.example.careermarsaiproject.utils.IdWorker;
 import com.example.careermarsaiproject.vo.*;
@@ -34,7 +33,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -69,10 +67,7 @@ public class AiAnswerService {
     private IConsultationRecordService consultationRecordService;
     @Autowired
     private TencentOcrService tencentOcrService;
-    @Autowired
-    private IYxbEndScoreService yxbEndScoreService;
-    @Autowired
-    private IYxbScoreService yxbScoreService;
+
 
     // ====================== 统一AI调用核心 ======================
     public String callWithMessage(String question, int maxRetry, int timeOut) throws Exception {
@@ -829,111 +824,5 @@ public class AiAnswerService {
             e.printStackTrace();
             return Result.error("e");
         }
-    }
-
-//    public Result<List<YxbEndScore>> listRank() {
-//        LambdaQueryWrapper<YxbEndScore> wrapper = new LambdaQueryWrapper<>();
-//        wrapper.orderByDesc(YxbEndScore::getExpert, YxbEndScore::getVolkswagen);
-//
-//        List<YxbEndScore> list = yxbEndScoreService.list(wrapper);
-//        return Result.success(list);
-//    }
-//
-//    public void saveCurrentScore(YxbScoreDTO dto) {
-//        // 逻辑：始终只保留1条记录，每次提交直接清空旧数据，新增一条
-//        LambdaQueryWrapper<YxbScore> queryWrapper = new LambdaQueryWrapper<YxbScore>()
-//                .eq(YxbScore::getName, dto.getName())
-//                .eq(YxbScore::getWork, dto.getWork());;
-//
-//        yxbScoreService.remove(queryWrapper);
-//        YxbScore yxbScore = new YxbScore();
-//        yxbScore.setName(dto.getName());
-//        yxbScore.setWork(dto.getWork());
-//        yxbScore.setScore1(dto.getScore1());
-//        yxbScore.setScore2(dto.getScore2());
-//        yxbScore.setScore3(dto.getScore3());
-//        yxbScore.setScore4(dto.getScore4());
-//        yxbScore.setUpdateTime(LocalDateTime.now());
-//        yxbScoreService.save(yxbScore);
-//    }
-//
-//    // 获取大屏当前展示分数
-//    public YxbScore getCurrentScore() {
-//        LambdaQueryWrapper<YxbScore> wrapper = new LambdaQueryWrapper<>();
-//        wrapper.orderByDesc(YxbScore::getId) // 按主键倒序，拿最新一条
-//                .last("limit 1");
-//        return yxbScoreService.getOne(wrapper);
-//    }
-
-    public Result<YxbScore> searchScore() {
-        YxbScore yxbScore = yxbScoreService.getOne(new LambdaQueryWrapper<YxbScore>()
-                .orderByDesc(YxbScore::getUpdateTime)
-                .last("LIMIT 1"));
-        return Result.success(yxbScore);
-    }
-
-    public Result insertScore(YxbScoreDto dto) {
-        YxbScore yxbScore = new YxbScore();
-        BeanUtils.copyProperties(dto, yxbScore);
-        if (dto.getScore1() == null) {
-            yxbScore.setScore1(0.0);
-        }
-        if (dto.getScore2() == null) {
-            yxbScore.setScore2(0.0);
-        }
-        if (dto.getScore3() == null) {
-            yxbScore.setScore3(0.0);
-        }
-        if (dto.getScore4() == null) {
-            yxbScore.setScore4(0.0);
-        }
-        yxbScore.setId(IdWorker.getId().toString());
-        yxbScore.setUpdateTime(LocalDateTime.now());
-        boolean result = yxbScoreService.save(yxbScore);
-        if (result) {
-            return Result.success();
-        }else {
-            return Result.error("更新失败！");
-        }
-    }
-
-    public Result<List<YxbEndScoreVo>> searchEndScore() {
-        List<YxbEndScore> list = yxbEndScoreService.list();
-        List<YxbEndScoreVo> voList = new ArrayList<>();
-        for (YxbEndScore yxbEndScore : list) {
-            YxbEndScoreVo vo = new YxbEndScoreVo();
-            if (yxbEndScore.getExpert() != null && yxbEndScore.getExpert() != -1 &&
-                    yxbEndScore.getVolkswagen() != null && yxbEndScore.getVolkswagen() != -1) {
-                int expert = (int) (yxbEndScore.getExpert() / 5);
-                int volkswagen = (int) (yxbEndScore.getVolkswagen() / 10);
-                int score = (int) ((expert + volkswagen) / 2);
-                vo.setExpertScore(yxbEndScore.getExpert());
-                vo.setVolkswagenScore(yxbEndScore.getVolkswagen());
-                vo.setEndScore(score);
-            }else {
-                vo.setEndScore(-1);
-                if (yxbEndScore.getExpert() != null){
-                    vo.setExpertScore(yxbEndScore.getExpert());
-                }else {
-                    vo.setExpertScore(-1);
-                }
-                if (yxbEndScore.getVolkswagen() != null){
-                    vo.setVolkswagenScore(yxbEndScore.getVolkswagen());
-                }else {
-                    vo.setVolkswagenScore(-1);
-                }
-            }
-            vo.setName(yxbEndScore.getName());
-            voList.add(vo);
-        }
-        return Result.success(voList);
-    }
-
-    public Result<List<YxbEndScore>> searchCurrentScore() {
-        return Result.success(yxbEndScoreService.list());
-    }
-
-    public Result<Boolean> updateEndScore(YxbEndScore yxbEndScore) {
-        return Result.success(yxbEndScoreService.updateById(yxbEndScore));
     }
 }

@@ -7,7 +7,7 @@ public class YxbJudgesLoginDto {
     /**
      * 账号
      */
-    private String accountNumber;
+    private String account;
 
     /**
      * 密码

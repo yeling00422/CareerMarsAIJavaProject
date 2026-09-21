@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @ApiModel(value = "YxbEndScoreVo", description = "毓秀杯最终得分")
 public class YxbEndScoreVo {
     private String name;
-    private int expertScore;
-    private int volkswagenScore;
-    private int endScore;
+    private Double expertEndScore;
+    private Double volkswagenEndScore;
+    private Double endScore;
 }

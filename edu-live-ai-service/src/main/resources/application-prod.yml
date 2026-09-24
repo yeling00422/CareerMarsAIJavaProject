@@ -37,3 +37,11 @@ jwt:
 
 log:
   path: /home/live/log/ai-service.log
+
+
+wx:
+  ggpt:
+    appId: wx3ac13a15b8fd070e
+    appSecret: 8f1bb00b6eeecc501dbbfdd2d0ce8299
+    tokenUrl: https://api.weixin.qq.com/sns/oauth2/access_token?appid=APPID&secret=SECRET&code=CODE&grant_type=authorization_code
+    userInfoUrl: https://api.weixin.qq.com/sns/userinfo?access_token=ACCESS_TOKEN&openid=OPENID

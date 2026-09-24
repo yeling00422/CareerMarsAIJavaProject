@@ -33,7 +33,7 @@ public class CodeGenerator {
                             }})
                     )
                     .strategyConfig(builder -> builder
-                                    .addInclude("yxb_score") // 指定生成的表
+                                    .addInclude("yxb_vote_record") // 指定生成的表
                                     .addTablePrefix("tb_")
                                     .entityBuilder()
                                     .enableLombok()

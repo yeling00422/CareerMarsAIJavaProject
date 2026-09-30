@@ -4,12 +4,13 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.careermarsaiproject.base.Result;
-import com.example.careermarsaiproject.dto.WxInfoResp;
-import com.example.careermarsaiproject.dto.YxbJudgesLoginDto;
-import com.example.careermarsaiproject.dto.YxbScoreDto;
-import com.example.careermarsaiproject.dto.YxbVoteReq;
+import com.example.careermarsaiproject.dto.*;
 import com.example.careermarsaiproject.entity.*;
+import com.example.careermarsaiproject.enums.AuthServerConstant;
+import com.example.careermarsaiproject.enums.ResultEnum;
 import com.example.careermarsaiproject.utils.IdWorker;
+import com.example.careermarsaiproject.utils.RandomUUID;
+import com.example.careermarsaiproject.utils.SendSms;
 import com.example.careermarsaiproject.utils.WxLoginConfig;
 import com.example.careermarsaiproject.vo.YxbEndScoreVo;
 import com.example.careermarsaiproject.vo.YxbJudgeScoreVo;
@@ -19,6 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -28,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -49,7 +52,12 @@ public class YxbService {
     private IYxbUserService yxbUserService;
     @Autowired
     private IYxbVoteRecordService yxbVoteRecordService;
-
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    private SendSms sendSms;
+    @Autowired
+    private IYxbDanmuRecordService yxbDanmuRecordService;
 
     public Result<List<YxbScore>> searchScore() {
         return Result.success(yxbScoreService.list());
@@ -283,8 +291,12 @@ public class YxbService {
     @Transactional
     public Result updateVote(YxbVoteReq yxbVoteReq) {
         YxbVote yxbVote = yxbVoteReq.getItem();
-        YxbUser userDate = yxbVoteReq.getUserDate();
-        String userId = userDate.getId();
+        YxbUser userData = yxbVoteReq.getUserData();
+        YxbUser currentUser = yxbUserService.getById(userData);
+        if (currentUser.getStatus() == 0){
+            return Result.error("禁用状态不能投票!");
+        }
+        String userId = userData.getId();
 
         boolean updateSuccess = yxbUserService.lambdaUpdate()
                 .eq(YxbUser::getId, userId)
@@ -314,65 +326,65 @@ public class YxbService {
     }
 
 
-    public Result<YxbUser> userLogin(String code, String state, HttpServletResponse response) {
-        String url = wxLoginConfig.tokenUrl.replace("APPID", wxLoginConfig.appId).replace("SECRET", wxLoginConfig.appSecret).replace("CODE", code);
-        String result = restTemplate.getForEntity(url, String.class).getBody();
-        JSONObject loginResult = JSONUtil.parseObj(result);
-
-        if(loginResult.containsKey("errcode")){
-            log.error("微信code换取openid失败，errcode:{},errmsg:{}", loginResult.getStr("errcode"), loginResult.getStr("errmsg"));
-            return Result.error("微信授权凭证失效，请重新扫码");
-        }
-
-        WxToken wxToken = new WxToken();
-        wxToken.setAccessToken(loginResult.getStr("access_token"));
-        wxToken.setOpenid(loginResult.getStr("openid"));
-        wxToken.setExpiresIn(loginResult.getStr("expires_in"));
-        wxToken.setUnionid(loginResult.getStr("unionid"));
-        wxToken.setScope(loginResult.getStr("scope"));
-        wxToken.setRefreshToken(loginResult.getStr("refresh_token"));
-
-        String wxUrl = wxLoginConfig.userInfoUrl.replace("ACCESS_TOKEN", wxToken.getAccessToken()).replace("OPENID", wxToken.getOpenid());
-        String userInfoJsonStr = restTemplate.getForEntity(wxUrl, String.class).getBody();
-        userInfoJsonStr = new String(userInfoJsonStr.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
-        log.info("转码后微信原始返回: {}", userInfoJsonStr);
-        JSONObject jsonObj = JSONUtil.parseObj(userInfoJsonStr);
-        WxInfoResp wxInfoResp = JSONUtil.toBean(jsonObj, WxInfoResp.class);
-        
-//        WxInfoResp wxInfoResp = new WxInfoResp();
-//        wxInfoResp.setOpenid("ogAEl6ebh5ExGB3kX-82PtdJvAIg");
-//        wxInfoResp.setUnionid("oKz8N603alPlxYoAws-PhqohD5k0");
-//        wxInfoResp.setNickname("叶陵");
-//        wxInfoResp.setHeadimgurl("https://thirdwx.qlogo.cn/mmopen/vi_32/NfSUuFVlu2dSwO1let2MTGTtjU46AoUHrQuLy9icQeg8s0ExJTaYgGH0bwxIOt5EibgGCpeOhU04a7B4Yuw99VrKjuKh3vJlmJTRnkqU05l3I/132");
-//        wxInfoResp.setSex(0);
-//        wxInfoResp.setProvince("");
-//        wxInfoResp.setCity("");
-//        wxInfoResp.setCountry("");
-
-        YxbUser yxbUser = yxbUserService.getOne(new LambdaQueryWrapper<YxbUser>()
-                .eq(YxbUser::getOpenId, wxInfoResp.getOpenid()));
-        if (yxbUser == null){
-            yxbUser = new YxbUser();
-            BeanUtils.copyProperties(wxInfoResp, yxbUser);
-            yxbUser.setId(IdWorker.getId().toString());
-            yxbUser.setOpenId(wxInfoResp.getOpenid());
-            yxbUser.setUnionId(wxInfoResp.getUnionid());
-            yxbUser.setNickName(wxInfoResp.getNickname());
-            yxbUser.setHeadImg(wxInfoResp.getHeadimgurl());
-            yxbUser.setProvice(wxInfoResp.getProvince());
-            yxbUser.setVoteCount(3);
-            yxbUser.setCreateTime(LocalDateTime.now());
-            yxbUser.setUpdateTime(LocalDateTime.now());
-            boolean saveResult = yxbUserService.save(yxbUser);
-            if (saveResult){
-                return Result.success(yxbUser);
-            }else {
-                return Result.error("用户创建失败!");
-            }
-        }else {
-            return Result.success(yxbUser);
-        }
-    }
+//    public Result<YxbUser> userLogin(String code, String state, HttpServletResponse response) {
+//        String url = wxLoginConfig.tokenUrl.replace("APPID", wxLoginConfig.appId).replace("SECRET", wxLoginConfig.appSecret).replace("CODE", code);
+//        String result = restTemplate.getForEntity(url, String.class).getBody();
+//        JSONObject loginResult = JSONUtil.parseObj(result);
+//
+//        if(loginResult.containsKey("errcode")){
+//            log.error("微信code换取openid失败，errcode:{},errmsg:{}", loginResult.getStr("errcode"), loginResult.getStr("errmsg"));
+//            return Result.error("微信授权凭证失效，请重新扫码");
+//        }
+//
+//        WxToken wxToken = new WxToken();
+//        wxToken.setAccessToken(loginResult.getStr("access_token"));
+//        wxToken.setOpenid(loginResult.getStr("openid"));
+//        wxToken.setExpiresIn(loginResult.getStr("expires_in"));
+//        wxToken.setUnionid(loginResult.getStr("unionid"));
+//        wxToken.setScope(loginResult.getStr("scope"));
+//        wxToken.setRefreshToken(loginResult.getStr("refresh_token"));
+//
+//        String wxUrl = wxLoginConfig.userInfoUrl.replace("ACCESS_TOKEN", wxToken.getAccessToken()).replace("OPENID", wxToken.getOpenid());
+//        String userInfoJsonStr = restTemplate.getForEntity(wxUrl, String.class).getBody();
+//        userInfoJsonStr = new String(userInfoJsonStr.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+//        log.info("转码后微信原始返回: {}", userInfoJsonStr);
+//        JSONObject jsonObj = JSONUtil.parseObj(userInfoJsonStr);
+//        WxInfoResp wxInfoResp = JSONUtil.toBean(jsonObj, WxInfoResp.class);
+//
+////        WxInfoResp wxInfoResp = new WxInfoResp();
+////        wxInfoResp.setOpenid("ogAEl6ebh5ExGB3kX-82PtdJvAIg");
+////        wxInfoResp.setUnionid("oKz8N603alPlxYoAws-PhqohD5k0");
+////        wxInfoResp.setNickname("叶陵");
+////        wxInfoResp.setHeadimgurl("https://thirdwx.qlogo.cn/mmopen/vi_32/NfSUuFVlu2dSwO1let2MTGTtjU46AoUHrQuLy9icQeg8s0ExJTaYgGH0bwxIOt5EibgGCpeOhU04a7B4Yuw99VrKjuKh3vJlmJTRnkqU05l3I/132");
+////        wxInfoResp.setSex(0);
+////        wxInfoResp.setProvince("");
+////        wxInfoResp.setCity("");
+////        wxInfoResp.setCountry("");
+//
+//        YxbUser yxbUser = yxbUserService.getOne(new LambdaQueryWrapper<YxbUser>()
+//                .eq(YxbUser::getOpenId, wxInfoResp.getOpenid()));
+//        if (yxbUser == null){
+//            yxbUser = new YxbUser();
+//            BeanUtils.copyProperties(wxInfoResp, yxbUser);
+//            yxbUser.setId(IdWorker.getId().toString());
+//            yxbUser.setOpenId(wxInfoResp.getOpenid());
+//            yxbUser.setUnionId(wxInfoResp.getUnionid());
+//            yxbUser.setNickName(wxInfoResp.getNickname());
+//            yxbUser.setHeadImg(wxInfoResp.getHeadimgurl());
+//            yxbUser.setProvice(wxInfoResp.getProvince());
+//            yxbUser.setVoteCount(3);
+//            yxbUser.setCreateTime(LocalDateTime.now());
+//            yxbUser.setUpdateTime(LocalDateTime.now());
+//            boolean saveResult = yxbUserService.save(yxbUser);
+//            if (saveResult){
+//                return Result.success(yxbUser);
+//            }else {
+//                return Result.error("用户创建失败!");
+//            }
+//        }else {
+//            return Result.success(yxbUser);
+//        }
+//    }
 
     public Result<List<YxbVoteRecordVo>> currentVoteRecord() {
         Map<String, String> voteMap = yxbVoteService.list().stream()
@@ -391,5 +403,100 @@ public class YxbService {
             voList.add(vo);
         }
         return Result.success(voList);
+    }
+
+    public Result sendCode( SmsCodeDto dto) {
+        String phone = dto.getPhone();
+        String countryNum = dto.getCountryNum();
+        String countryCode = dto.getCountryCode();
+        String redisCode = stringRedisTemplate.opsForValue().get(AuthServerConstant.SMS_CODE_YXB_USER_LOGIN_PREFIX + phone);
+        if (!StringUtils.isEmpty(redisCode)) {
+            long redisDate = Long.parseLong(redisCode.split("_")[1]);
+            if (System.currentTimeMillis() - redisDate < 60000) {
+                return Result.error(ResultEnum.SMS_CODE_EXCEPTION);
+            }
+        }
+        String code = RandomUUID.randomSixNumber();
+        String dateCode = code + "_" + System.currentTimeMillis();
+        stringRedisTemplate.opsForValue().set(AuthServerConstant.SMS_CODE_YXB_USER_LOGIN_PREFIX + phone, dateCode, 10, TimeUnit.MINUTES);
+        sendSms.sendResetCode(phone, code,countryCode,countryNum);
+        return Result.success();
+    }
+
+    public Result<YxbUser> userLogin(UserLoginDto dto) {
+        String redisCode = stringRedisTemplate.opsForValue().get(AuthServerConstant.SMS_CODE_YXB_USER_LOGIN_PREFIX + dto.getPhone());
+        if (org.springframework.util.StringUtils.isEmpty(redisCode)) {
+            return Result.error(ResultEnum.SMS_CODE_EXPIRE.getCode(), ResultEnum.SMS_CODE_EXPIRE.getDesc());
+        }
+        String successCode = redisCode.split("_")[0];
+        if (!successCode.equals(dto.getCode())) {
+            return Result.error(ResultEnum.SMS_CODE_ERROR.getCode(), ResultEnum.SMS_CODE_ERROR.getDesc());
+        }
+        YxbUser yxbUser = yxbUserService.getOne(new LambdaQueryWrapper<YxbUser>()
+                .eq(YxbUser::getPhone, dto.getPhone())
+                .eq(YxbUser::getCountryNum,dto.getCountryNum())
+                .eq(YxbUser::getCountryCode,dto.getCountryCode()));
+
+        if (yxbUser == null){
+            yxbUser = new YxbUser();
+            BeanUtils.copyProperties(dto,yxbUser);
+            yxbUser.setId(IdWorker.getId().toString());
+            yxbUser.setNickName("用户-"+System.currentTimeMillis());
+            yxbUser.setHeadImg("https://edulive-1307498917.cos.ap-shanghai.myqcloud.com/image-dev/b899b02f516947c497d096bcd520aea4.png");
+            yxbUser.setVoteCount(3);
+            yxbUser.setStatus(1);
+            yxbUser.setCreateTime(LocalDateTime.now());
+            yxbUser.setUpdateTime(LocalDateTime.now());
+            boolean result = yxbUserService.save(yxbUser);
+            if (!result){
+                return Result.error("创建用户失败！请稍后再试");
+            }
+        }
+        return Result.success(yxbUser);
+    }
+
+    public Result updateUser(YxbUser yxbUser) {
+        yxbUser.setUpdateTime(LocalDateTime.now());
+        yxbUser.setCreateTime(LocalDateTime.now());
+        boolean result = yxbUserService.updateById(yxbUser);
+        if (result){
+            return Result.success();
+        }else {
+            return Result.error("用户信息更新失败！请稍后再试");
+        }
+    }
+
+    public Result sendDanmu(DanmuRecordDto dto) {
+        YxbUser yxbUser = yxbUserService.getById(dto.getId());
+        if (yxbUser == null){
+            return Result.error("用户不存在！");
+        }
+        if (yxbUser.getStatus() == 0){
+            return Result.error("禁用状态不能发送弹幕！");
+        }
+
+        YxbDanmuRecord yxbDanmuRecord = new YxbDanmuRecord();
+        BeanUtils.copyProperties(dto,yxbDanmuRecord);
+        yxbDanmuRecord.setId(IdWorker.getId().toString());
+        yxbDanmuRecord.setUserId(dto.getId());
+        yxbDanmuRecord.setCreatTime(LocalDateTime.now());
+        boolean result = yxbDanmuRecordService.save(yxbDanmuRecord);
+        if (result){
+            return Result.success();
+        }else {
+            return Result.error("发送失败！");
+        }
+    }
+
+    public Result<List<YxbDanmuRecord>> currentDanmu(String lastId) {
+        LocalDateTime oneMinuteAgo = LocalDateTime.now().minusMinutes(1);
+        LambdaQueryWrapper<YxbDanmuRecord> queryWrapper = new LambdaQueryWrapper<>();
+        if(lastId != null){
+            queryWrapper.gt(YxbDanmuRecord::getId, lastId);
+        }
+        queryWrapper.ge(YxbDanmuRecord::getCreatTime, oneMinuteAgo);
+        queryWrapper.orderByAsc(YxbDanmuRecord::getCreatTime);
+        List<YxbDanmuRecord> list = yxbDanmuRecordService.list(queryWrapper);
+        return Result.success(list);
     }
 }

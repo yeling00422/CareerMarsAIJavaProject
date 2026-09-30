@@ -31,3 +31,14 @@ build/
 
 ### VS Code ###
 .vscode/
+
+
+# MacOS 系统文件（新增）
+.DS_Store
+**/.DS_Store
+
+# 日志文件（新增）
+E:/live/log/
+**/log/
+*.log
+*.log.*.gz
